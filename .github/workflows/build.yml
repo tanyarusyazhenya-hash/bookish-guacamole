@@ -6,6 +6,8 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
@@ -27,3 +29,14 @@ jobs:
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar
+      - name: publish release with the mod jar
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          JAR=$(ls build/libs/astanaclock-*.jar | grep -v -- '-sources')
+          echo "Mod jar: $JAR"
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest "$JAR" --target "${{ github.sha }}" \
+            --title "Astana Clock (последняя сборка)" \
+            --notes "Готовый мод для Minecraft 1.21.11 (Fabric). Нужен Fabric API 0.141.6+1.21.11."
